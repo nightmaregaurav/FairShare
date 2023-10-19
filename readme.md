@@ -1,5 +1,6 @@
 # FairShare (Cost Splitter)
-#### Gaurav's fair share problem & Reduction by Transitive Debt Algorithm<hr/>
+#### Gaurav's fair share problem & Reduction by Transitive Debt Algorithm
+<hr/>
 
 ### Split shared expense so that there are least number of transactions.
 ### Maximum Transactions = `(n-1)` `WHERE` `n` = `number of members in group`.
@@ -165,6 +166,13 @@
   * `C` &rarrlp; `E` [`626`]
   * `E` &rarrlp; `A` [`1240`]
 
-## This repo contains C# implementation of this algorithm. Although the implementation may not be the most efficient one.
+### This repo contains C# implementation of this algorithm. Although the implementation may not be the most efficient one.
 
+## License & Copyright
+The code along with the problem statement and algorithm is released under the MIT License. You can find the full license details in the [LICENSE](LICENSE) file.
 
+Made with ❤️ by [NightmareGaurav](https://github.com/nightmaregaurav).
+
+---
+Open For Contribution
+---
