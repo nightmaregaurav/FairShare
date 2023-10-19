@@ -118,7 +118,7 @@
 ### If you have a close look, there is nowhere to reduce as we did before. But That's where the magic kicks in!
 
 ### The matrix shows how much one has to pay in the column and receive in the row, let's transpose to change it.
-| S\R | A     | B      | C    | D      | E    |
+| S\R | `A`   | `B`    | `C`  | `D`    | `E`  |
 |-----|-------|--------|------|--------|------|
 | `A` | 0.00  | 103.60 | 0.00 | 343.60 | 0.00 |	
 | `B` | 0.00  | 0.00   | 0.00 | 240.00 | 0.00 |	
@@ -127,7 +127,7 @@
 | `E` | 56.40 | 160.00 | 0.00 | 400.00 | 0.00 |
 
 ### Since we don't have the option to reduce directly, let's look at a scenario:
-  * `X` has to pay `Y` and `Z` `$10` and `$26` respectively, and `Y` has to pay 'Z' `$ABC`,
+  * `X` has to pay `Y` and `Z` `$10` and `$26` respectively, and `Y` has to pay `Z` `$ABC`,
     * In a broad sense, this scenario is similar to what we have, there are no direct reductions.
     * But, what if, instead of paying both `Y` and `Z` their respective amount, `X` says:
       * Hey `Y`, since you have to pay something to `Z` anyway,
@@ -146,12 +146,12 @@
 
 ### So, in our case
   * The order is `C`, `E`, `A`, `B`, `D`
-    * The amount `C`, have to pay `E` is the sum of all debt 'C' has.
-    * `E` Keeps what `C` owes `E`, Add what 'E' owes to `A`. `B`, and `D` and pay that Sum to `A`.
+    * The amount `C`, have to pay `E` is the sum of all debt `C` has.
+    * `E` Keeps what `C` owes `E`, Add what `E` owes to `A`. `B`, and `D` and pay that Sum to `A`.
     * This continues till the end and all the debt is settled.
 
 ### Finally
-| S\R | A       | B       | C    | D       | E      |
+| S\R | `A`     | `B`     | `C`  | `D`     | `E`    |
 |-----|---------|---------|------|---------|--------|
 | `A` | 0.00    | 1572.00 | 0.00 | 0.00    | 0.00   |		
 | `B` | 0.00    | 0.00    | 0.00 | 1386.00 | 0.00   |		
