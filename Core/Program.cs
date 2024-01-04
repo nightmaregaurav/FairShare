@@ -1,49 +1,68 @@
-﻿using Core.Extensions;
-using Core.Helpers;
+﻿using Core.Helpers;
+using Core.Models;
+using Console = Core.Helpers.Console;
 
+// Initial Env Setup
+var useArtifact = Console.GetBool("Do you want to use previous run artifact? ", "no");
+var artifactFolder = useArtifact ? Console.GetString("Provide name of the folder: ", "artifacts") : FileHelper.CreateTimestampedFolderAndGetName("artifact");
 
-var useArtifact = UserInputHelper.GetBoolInput("Do you want to use previous run artifact? ", "no");
-var artifactFolder = useArtifact ? UserInputHelper.GetStringInput("Provide name of the folder: ", "artifacts") : FileHelper.CreateTimestampedFolderAndGetName("artifact");
-
+// Only used to get Raw data
 var groupSize = FileHelper.ChooseArtifactOrGet(artifactFolder, "groupSize", DataCollector.GetGroupSize);
-var members = FileHelper.ChooseArtifactOrGet(artifactFolder, "members", () => DataCollector.GetGroupMembers(groupSize.Total));
-var expenses = FileHelper.ChooseArtifactOrGet(artifactFolder, "expenses", () => DataCollector.RecordExpenses(members), true);
+var members = FileHelper.ChooseArtifactOrGet(artifactFolder, "members", () => DataCollector.GetGroupMembers(groupSize));
+var expenses = FileHelper.ChooseArtifactOrGet<List<Expense>>(artifactFolder, "expenses", prev =>
+{
+    prev.AddRange(DataCollector.RecordExpenses(members, prev.Count));
+    return prev;
+});
 
-var pmTotal = FileHelper.SaveResultAsArtifactAndGet(artifactFolder, "pmTotal", () => SplitHelper.GetPerMemberTotal(expenses, members));
-var pmSplit = FileHelper.SaveResultAsArtifactAndGet(artifactFolder, "pmSplit", () => SplitHelper.GetPerMemberSplit(pmTotal));
-var reducedPmSplit = FileHelper.SaveResultAsArtifactAndGet(artifactFolder, "reducedPmSplit", () => SplitHelper.ReduceSplitMatrix(pmSplit.Copy()));
 
-var transposePmSplit = FileHelper.SaveResultAsArtifactAndGet(artifactFolder, "transposePmSplit", () => pmSplit.Transpose());
-var pmSplitDistributions = FileHelper.SaveResultAsArtifactAndGet(artifactFolder, "distributions", () => SplitHelper.GetDistributions(transposePmSplit.Copy(), members));
+// Step 0: Raw data of total expenses
+var perMemberTotal = FileHelper.SaveResultAsArtifactAndGet(artifactFolder, "perMemberTotal", () => SplitHelper.GetPerMemberTotal(expenses, members));
+// Step 1: Sort the raw data based on expense [Ascending]
+perMemberTotal = perMemberTotal.OrderBy(x => x.Amount).ToList();
+members.ForEach(x =>
+{
+    x.Id = perMemberTotal.Select(y => y.By).ToList().IndexOf(x);
+});
+// Step 2: Form a per-member split matrix A
+var perMemberSplit = FileHelper.SaveResultAsArtifactAndGet(artifactFolder, "perMemberSplit", () => SplitHelper.GetPerMemberSplit(perMemberTotal));
+// Step 3: Transpose the per-member split matrix A to create new matrix A'
+var transposedPerMemberSplit = FileHelper.SaveResultAsArtifactAndGet(artifactFolder, "transposedPerMemberSplit", () => perMemberSplit.Transpose());
+// Step 4: Create a new matrix B such that B = A-A'
+var subtractedPerMemberSplit = FileHelper.SaveResultAsArtifactAndGet(artifactFolder, "subtractedPerMemberSplit", () => perMemberSplit.Subtract(transposedPerMemberSplit));
+// Step 5: Create another matrix C such that C = Max(0, B)
+var reducedPerMemberSplit = FileHelper.SaveResultAsArtifactAndGet(artifactFolder, "reducedPerMemberSplit", () => subtractedPerMemberSplit.Max(subtractedPerMemberSplit.CreateFlatMatrix(0)));
+// Step 6: Create new reduced 1*X transaction matrix D such as D[i] = Sum(Row[i]) - Sum(Col[i])
+var transactions = FileHelper.SaveResultAsArtifactAndGet(artifactFolder, "transactions", () => SplitHelper.ReduceAndGetTransactionMatrix(reducedPerMemberSplit));
+// Step 7: Every i in matrix D will pay i+1 X amount where X = (D1i + D1i-1)
+var finalDistributions = FileHelper.SaveResultAsArtifactAndGet(artifactFolder, "finalDistributions", () => SplitHelper.GetDistributionsFromTransactions(transactions, members));
 
-var transposeReducedSplit = FileHelper.SaveResultAsArtifactAndGet(artifactFolder, "transposePmSplit", () => reducedPmSplit.Transpose());
-var reducedSplitDistributions = FileHelper.SaveResultAsArtifactAndGet(artifactFolder, "distributions", () => SplitHelper.GetDistributions(transposeReducedSplit.Copy(), members));
 
-var linearReduce = FileHelper.SaveResultAsArtifactAndGet(artifactFolder, "linearReduce", () => SplitHelper.LinearSplitReduce(transposeReducedSplit.Copy()));
-var finalDistributions = FileHelper.SaveResultAsArtifactAndGet(artifactFolder, "distributions", () => SplitHelper.GetDistributions(linearReduce.Copy(), members));
+// Only used to print
+var perMemberSplitDistributions = FileHelper.SaveResultAsArtifactAndGet(artifactFolder, "perMemberSplitDistributions", () => SplitHelper.GetDistributions(perMemberSplit, members));
+var reducedPerMemberSplitDistributions = FileHelper.SaveResultAsArtifactAndGet(artifactFolder, "reducedPerMemberSplitDistributions", () => SplitHelper.GetDistributions(reducedPerMemberSplit, members));
 
-OutputProvider.PrintHorizontalRule('-');
-OutputProvider.PrintHorizontalRule('-');
+// To Pretty Print calculations
+Console.PrintHorizontalRule();
+Console.PrintHorizontalRule();
 OutputProvider.PrintExpenses("all", expenses);
-OutputProvider.PrintHorizontalRule('-');
-OutputProvider.PrintHorizontalRule('-');
-OutputProvider.PrintExpenses("total", pmTotal);
-OutputProvider.PrintHorizontalRule('-');
-OutputProvider.PrintHorizontalRule('-');
-OutputProvider.PrintMatrix("Split", pmSplit);
-OutputProvider.PrintHorizontalRule('-');
-OutputProvider.PrintDistributionInfo("per member split", pmSplitDistributions);
-OutputProvider.PrintHorizontalRule('-');
-OutputProvider.PrintHorizontalRule('-');
-OutputProvider.PrintMatrix("Reduced", reducedPmSplit);
-OutputProvider.PrintHorizontalRule('-');
-OutputProvider.PrintDistributionInfo("per member reduced", reducedSplitDistributions);
-OutputProvider.PrintHorizontalRule('-');
-OutputProvider.PrintHorizontalRule('-');
-OutputProvider.PrintMatrix("Transpose", transposeReducedSplit);
-OutputProvider.PrintHorizontalRule('-');
-OutputProvider.PrintMatrix("Linear", linearReduce);
-OutputProvider.PrintHorizontalRule('-');
+Console.PrintHorizontalRule();
+Console.PrintHorizontalRule();
+OutputProvider.PrintExpenses("total", perMemberTotal);
+Console.PrintHorizontalRule();
+Console.PrintHorizontalRule();
+OutputProvider.PrintExpenseMatrix("Split", perMemberSplit);
+Console.PrintHorizontalRule();
+OutputProvider.PrintDistributionInfo("per member split", perMemberSplitDistributions);
+Console.PrintHorizontalRule();
+Console.PrintHorizontalRule();
+OutputProvider.PrintExpenseMatrix("Reduced", reducedPerMemberSplit);
+Console.PrintHorizontalRule();
+OutputProvider.PrintDistributionInfo("per member reduced", reducedPerMemberSplitDistributions);
+Console.PrintHorizontalRule();
+Console.PrintHorizontalRule();
+OutputProvider.PrintTransactionMatrix(transactions);
+Console.PrintHorizontalRule();
 OutputProvider.PrintDistributionInfo("final", finalDistributions);
-OutputProvider.PrintHorizontalRule('-');
-OutputProvider.PrintHorizontalRule('-');
+Console.PrintHorizontalRule();
+Console.PrintHorizontalRule();

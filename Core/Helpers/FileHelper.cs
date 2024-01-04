@@ -1,4 +1,3 @@
-using System.Collections;
 using Core.Types;
 using SystemTextJsonHelper;
 
@@ -15,6 +14,12 @@ namespace Core.Helpers
             return folderName;
         }
 
+        public static bool FileExists(string folder, string filename)
+        {
+            var filePath = Path.Combine(folder, filename);
+            return File.Exists(filePath);
+        }
+
         public static void StoreDataAsJson<T>(string folder, string filename, T data)
         {
             Directory.CreateDirectory(folder);
@@ -22,52 +27,45 @@ namespace Core.Helpers
             File.WriteAllText(Path.Combine(folder, filename), jsonRepresentation);
         }
 
-        public static T? ReadJsonData<T>(string folder, string filename)
+        public static T ReadDataFromJson<T>(string folder, string filename)
         {
             var filePath = Path.Combine(folder, filename);
-            if (!File.Exists(filePath)) return default;
             var jsonContent = File.ReadAllText(filePath);
-            var jsonResult = JsonHelper.Deserialize<JsonNode<T>>(jsonContent);
-            return jsonResult != null ? jsonResult.Value : default;
+            var jsonResult = JsonHelper.Deserialize<JsonNode<T>>(jsonContent) ?? throw new Exception($"Cannot read {folder}/{filename} as json.");
+            return jsonResult.Value;
         }
 
-        public static T ChooseArtifactOrGet<T>(string folder, string filename, Func<T> ifUserDeny, bool rePrompt = false) where T : class
+        public static T ChooseArtifactOrGet<T>(string folder, string filename, Func<T, T> appendValuesToArtifact) where T : new()
         {
-            var filePath = Path.Combine(folder, filename);
-            if (!File.Exists(filePath)) return SaveResultAsArtifactAndGet(folder, filename, ifUserDeny);
+            if (!FileExists(folder, filename)) return SaveResultAsArtifactAndGet(folder, filename, () => appendValuesToArtifact(new T()));
 
-            var useArtifact = UserInputHelper.GetBoolInput(
+            var useArtifact = Console.GetBool(
+                $"An artifact {folder}/{filename} already exists. Do you want to load data from it? (yes/no)",
+                "yes"
+            );
+            if (!useArtifact) return SaveResultAsArtifactAndGet(folder, filename, () => appendValuesToArtifact(new T()));
+
+            var initialValue = ReadDataFromJson<T>(folder, filename);
+            return appendValuesToArtifact(initialValue);
+        }
+
+        public static T ChooseArtifactOrGet<T>(string folder, string filename, Func<T> ifUserDeny)
+        {
+            if (!FileExists(folder, filename)) return SaveResultAsArtifactAndGet(folder, filename, ifUserDeny);
+
+            var useArtifact = Console.GetBool(
                 $"An artifact {folder}/{filename} already exists. Do you want to load data from it? (yes/no)",
                 "yes"
             );
             if (!useArtifact) return SaveResultAsArtifactAndGet(folder, filename, ifUserDeny);
 
-            var value = ReadJsonData<T>(folder, filename);
-            if (value == null) Console.WriteLine("Failed to retrieve data from artifact!");
-            else if(!rePrompt) return value;
-
-            return SaveResultAsArtifactThenGet(folder, filename, ifUserDeny, value);
+            var value = ReadDataFromJson<T>(folder, filename);
+            return value;
         }
 
-        public static T SaveResultAsArtifactAndGet<T>(string folder, string filename, Func<T> ifUserDeny) where T : class
+        public static T SaveResultAsArtifactAndGet<T>(string folder, string filename, Func<T> ifUserDeny)
         {
             var valueFromFunc = ifUserDeny();
-            StoreDataAsJson(folder, filename, valueFromFunc);
-            return valueFromFunc;
-        }
-
-        public static T SaveResultAsArtifactThenGet<T>(string folder, string filename, Func<T> ifUserDeny, T value) where T : class
-        {
-            var valueFromFunc = ifUserDeny();
-
-            if (value is IList a)
-            {
-                var actualValueFromFunc = valueFromFunc as IList;
-                foreach (var entry in a) actualValueFromFunc?.Add(entry);
-                StoreDataAsJson(folder, filename, actualValueFromFunc);
-                return actualValueFromFunc as T ?? valueFromFunc;
-            }
-
             StoreDataAsJson(folder, filename, valueFromFunc);
             return valueFromFunc;
         }

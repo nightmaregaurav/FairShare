@@ -39,67 +39,48 @@ namespace Core.Helpers
 
                 for (var j = 0; j < totalMembers; j++)
                 {
-                    if (i == j)
-                        splitExpenses[i][j] = 0.0;
-                    else
-                        splitExpenses[i][j] = split;
+                    splitExpenses[i][j] = split;
                 }
             }
 
             return splitExpenses;
         }
 
-        public static double[][] ReduceSplitMatrix(double[][] matrix)
+        public static double[] ReduceAndGetTransactionMatrix(double[][] matrix)
         {
-            var matrixSize = matrix.Length;
-            for (var i = 0; i < matrixSize; i++)
-            {
-                var senderArraySize = matrix[i].Length;
-                for (var j = 0; j < senderArraySize; j++)
-                {
-                    if (!(matrix[i][j] > matrix[j][i]) || matrix[j][i] == 0) continue;
+            if (!IsSquareMatrix(matrix)) throw new ArgumentException("Input matrix must be square for creating a reduced matrix.");
+            var rows = matrix.Length;
+            var result = new double[rows];
 
-                    matrix[i][j] -= matrix[j][i];
-                    matrix[j][i] = 0.0;
-                }
+            for (var i = 0; i < rows; i++)
+            {
+                var rowSum = matrix[i].Sum();
+                var colSum = matrix.Sum(x => x[i]);
+                result[i] = rowSum - colSum;
             }
-            return matrix;
+
+            return result;
         }
 
-        public static int CountZeros(IEnumerable<double> row) => row.Count(val => val == 0);
-
-        public static double[][] LinearSplitReduce(double[][] matrix)
+        public static List<ExpenseDistribution> GetDistributionsFromTransactions(double[] transactions, List<Member> groupMembers)
         {
-            var assignmentOrderDict = new Dictionary<int, int>();
-            for (var index = 0; index < matrix.Length; index++)
+            var distributions = new List<ExpenseDistribution>();
+            var sum = 0.0;
+            for (var i = 0; i < transactions.Length-1; i++)
             {
-                var row = matrix[index];
-                assignmentOrderDict.Add(index, CountZeros(row));
-            }
-
-            var assignmentOrder = assignmentOrderDict.OrderBy(x => x.Value).ToList();
-
-            for (var index = 0; index < assignmentOrder.Count; index++)
-            {
-                if (index == assignmentOrder.Count - 1 || index == assignmentOrder.Count - 2) continue;
-
-                var i = assignmentOrder[index].Key;
-                var assignmentTargetIndex = assignmentOrder[index + 1].Key;
-                var allAmountToPay = matrix[i].Sum();
-
-                for (var j = 0; j < matrix[i].Length; j++)
+                var distribution = new ExpenseDistribution
                 {
-                    if (j == assignmentTargetIndex) matrix[i][j] = allAmountToPay;
-                    else
-                    {
-                        var replacement = matrix[i][j];
-                        matrix[i][j] = 0.0;
-                        matrix[assignmentTargetIndex][j] += replacement;
-                    }
-                }
+                    Sender = groupMembers.First(x => x.Id == i),
+                    Receiver = groupMembers.First(x => x.Id == i+1),
+                    Amount = Math.Abs(sum + transactions[i])
+                };
+                distributions.Add(distribution);
+                sum += transactions[i];
             }
 
-            return matrix;
+            sum += transactions.Last();
+            if (sum != 0) throw new Exception("Final sum must yield 0. Something went wrong.");
+            return distributions.OrderBy(x => x.Sender.Id).ThenBy(x => x.Receiver.Id).ThenByDescending(x => x.Amount).ToList();
         }
 
         public static List<ExpenseDistribution> GetDistributions(double[][] linearSplit, List<Member> groupMembers)
@@ -120,6 +101,14 @@ namespace Core.Helpers
                 }
             }
             return distributions.OrderBy(x => x.Sender.Id).ThenBy(x => x.Receiver.Id).ThenByDescending(x => x.Amount).ToList();
+        }
+
+        public static bool IsSquareMatrix(double[][] matrix)
+        {
+            var rows = matrix.Length;
+            if (rows == 0) return false;
+            var columns = matrix[0].Length;
+            return rows == columns;
         }
     }
 }
