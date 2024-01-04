@@ -27,7 +27,7 @@ In any group setting, be it with friends, roommates, or colleagues, splitting ex
 #### But what if I told you in a group of three, the calculation can be done in such a way that there is only 2 transaction at most?
 
 ## Solution
-Reduction by Debt Transfer Algorithm takes each person's contributions within the group and calculates the most efficient way to settle debts. The goal is simple: reduce the number of transactions each individual needs to keep track of to just two. One for giving and one for receiving.
+Reduction by Debt Transfer Algorithm takes each person's contributions within the group and calculates the most efficient way to settle debts. The goal is simple: reduce the number of transactions to minimum so the transactions each individual needs to keep track of will be just two(or one). One for giving and one for receiving.
 
 #### This tool (and algorithm) will allow you to split these costs so that there are at most `n-1` transactions where `n` is the number of members in the group.
 
