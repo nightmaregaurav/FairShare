@@ -77,7 +77,7 @@ Reduction by Debt Transfer Algorithm takes each person's contributions within th
 | Total | $1078 | `B` |
 | Total | $2278 | `D` |
 
-### Now, we can split those totals for each member and write them in the form of a matrix, the column being the payer and, the row being the receiver.
+### Now, we can split those totals for each member and write them in the form of a matrix, the row being the payer and, the column being the receiver.
 <b>(Note that the diagonal values are the amount that is to be paid by oneself. Thus, it has no worth)</b>
 
 `Step 2: Form a per-member split matrix A`
