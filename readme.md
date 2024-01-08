@@ -82,7 +82,7 @@ Reduction by Debt Transfer Algorithm takes each person's contributions within th
 
 `Step 2: Form a per-member split matrix A`
 
-| R\S | `C`    | `E`    | `A`    | `B`    | `D`    |
+| S\R | `C`    | `E`    | `A`    | `B`    | `D`    |
 |-----|--------|--------|--------|--------|--------|
 | `C` | 53.20  | 53.20  | 53.20  | 53.20  | 53.20  |
 | `E` | 55.60  | 55.60  | 55.60  | 55.60  | 55.60  |
@@ -131,7 +131,7 @@ Reduction by Debt Transfer Algorithm takes each person's contributions within th
 `Step 5: Create another reduction matrix C such that C = Max(0, B)`
 
 ### Now we have a reduced matrix
-| R\S | `C`    | `E`    | `A`    | `B`    | `D`  |
+| S\R | `C`    | `E`    | `A`    | `B`    | `D`  |
 |-----|--------|--------|--------|--------|------|
 | `C` | 0.00   | 0.00   | 0.00   | 0.00   | 0.00 |
 | `E` | 2.40   | 0.00   | 0.00   | 0.00   | 0.00 |
