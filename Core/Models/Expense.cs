@@ -2,7 +2,8 @@ namespace Core.Models
 {
     public class Expense
     {
-        public Member By { get; set; }
+        public int Id { get; set; }
+        public int By { get; set; }
         public string Head { get; set; }
         public double Amount { get; set; }
     }

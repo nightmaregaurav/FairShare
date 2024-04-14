@@ -8,7 +8,9 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <PackageReference Include="BetterConsoleTables" Version="2.0.5-rc1" />
       <PackageReference Include="nightmaregaurav.systemtextjsonhelper" Version="1.0.1" />
+      <PackageReference Include="Sharprompt" Version="3.0.0-preview4" />
     </ItemGroup>
 
 </Project>

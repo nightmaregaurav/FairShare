@@ -2,22 +2,12 @@ namespace Core.Helpers
 {
     public static class MatrixHelper
     {
-        public static void Print(this IEnumerable<double[]> matrix)
+        public static bool IsSquareMatrix(this double[][] matrix)
         {
-            foreach (var row in matrix)
-            {
-                foreach (var element in row) System.Console.Write(element.ToString("0.00").PadLeft(8) + "\t");
-                System.Console.WriteLine();
-            }
-        }
-
-        public static void Print(this IEnumerable<double> matrix)
-        {
-            foreach (var element in matrix)
-            {
-                System.Console.Write(element.ToString("0.00").PadLeft(8) + "\t");
-            }
-            System.Console.WriteLine();
+            var rows = matrix.Length;
+            if (rows == 0) return false;
+            var columns = matrix[0].Length;
+            return rows == columns;
         }
 
         public static double[][] Transpose(this double[][] matrix)

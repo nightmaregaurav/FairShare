@@ -8,17 +8,18 @@ namespace Core.Helpers
         {
             var expensesSum = new Dictionary<int, double>();
             for (var i = 0; i < groupMembers.Count; i++) expensesSum[i] = 0;
+
             foreach (var expense in expenses)
             {
                 var by = expense.By;
-                var total = expensesSum[by.Id];
+                var total = expensesSum[by];
                 total += expense.Amount;
-                expensesSum[by.Id] = total;
+                expensesSum[by] = total;
             }
 
             var totalExpenses = expensesSum.Keys.Select(by => new Expense
             {
-                By = groupMembers.First(x => x.Id == by),
+                By = by,
                 Head = "Total",
                 Amount = expensesSum[by]
             }).ToList();
@@ -48,7 +49,7 @@ namespace Core.Helpers
 
         public static double[] ReduceAndGetTransactionMatrix(double[][] matrix)
         {
-            if (!IsSquareMatrix(matrix)) throw new ArgumentException("Input matrix must be square for creating a reduced matrix.");
+            if (!matrix.IsSquareMatrix()) throw new ArgumentException("Input matrix must be square for creating a reduced matrix.");
             var rows = matrix.Length;
             var result = new double[rows];
 
@@ -70,8 +71,8 @@ namespace Core.Helpers
             {
                 var distribution = new ExpenseDistribution
                 {
-                    Sender = groupMembers.First(x => x.Id == i),
-                    Receiver = groupMembers.First(x => x.Id == i+1),
+                    Sender = groupMembers[i],
+                    Receiver = groupMembers[i+1],
                     Amount = Math.Abs(sum + transactions[i])
                 };
                 distributions.Add(distribution);
@@ -93,22 +94,14 @@ namespace Core.Helpers
                     if(linearSplit[i][j] == 0) continue;
                     var distribution = new ExpenseDistribution
                     {
-                        Sender = groupMembers.First(x => x.Id == i),
-                        Receiver = groupMembers.First(x => x.Id == j),
+                        Sender = groupMembers[i],
+                        Receiver = groupMembers[j],
                         Amount = linearSplit[i][j]
                     };
                     distributions.Add(distribution);
                 }
             }
             return distributions.OrderBy(x => x.Sender.Id).ThenBy(x => x.Receiver.Id).ThenByDescending(x => x.Amount).ToList();
-        }
-
-        public static bool IsSquareMatrix(double[][] matrix)
-        {
-            var rows = matrix.Length;
-            if (rows == 0) return false;
-            var columns = matrix[0].Length;
-            return rows == columns;
         }
     }
 }

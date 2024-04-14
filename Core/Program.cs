@@ -1,68 +1,95 @@
 ﻿using Core.Helpers;
 using Core.Models;
-using Console = Core.Helpers.Console;
+using Sharprompt;
+using SystemTextJsonHelper;
 
-// Initial Env Setup
-var useArtifact = Console.GetBool("Do you want to use previous run artifact? ", "no");
-var artifactFolder = useArtifact ? Console.GetString("Provide name of the folder: ", "artifacts") : FileHelper.CreateTimestampedFolderAndGetName("artifact");
+var useArtifact = Prompt.Confirm("Do you want to use previous artifact?", false);
+var artifactName = InputHelper.GetArtifactName(useArtifact);
 
-// Only used to get Raw data
-var groupSize = FileHelper.ChooseArtifactOrGet(artifactFolder, "groupSize", DataCollector.GetGroupSize);
-var members = FileHelper.ChooseArtifactOrGet(artifactFolder, "members", () => DataCollector.GetGroupMembers(groupSize));
-var expenses = FileHelper.ChooseArtifactOrGet<List<Expense>>(artifactFolder, "expenses", prev =>
+if (useArtifact)
 {
-    prev.AddRange(DataCollector.RecordExpenses(members, prev.Count));
-    return prev;
-});
+    Console.WriteLine($"Using artifact: {artifactName}");
+    Console.WriteLine("Available data from artifact will be set as default values.");
+}
 
+var artifact = useArtifact
+    ? JsonHelper.Deserialize<Artifact>(File.ReadAllText(artifactName)) ?? new Artifact()
+    : new Artifact {Name = artifactName};
+
+artifact.GetGroupMembers();
+if (artifact.Members.Count <= 1)
+{
+    Console.WriteLine("Please add at least 2 members to proceed.");
+    return;
+}
+artifact.GetExpenses();
+if (artifact.Expenses.Sum(x =>  x.Amount) == 0)
+{
+    Console.WriteLine("Please add at least 1 non-zero expense to proceed.");
+    return;
+}
 
 // Step 0: Raw data of total expenses
-var perMemberTotal = FileHelper.SaveResultAsArtifactAndGet(artifactFolder, "perMemberTotal", () => SplitHelper.GetPerMemberTotal(expenses, members));
+var perMemberTotal = SplitHelper.GetPerMemberTotal(artifact.Expenses, artifact.Members);
+
 // Step 1: Sort the raw data based on expense [Ascending]
 perMemberTotal = perMemberTotal.OrderBy(x => x.Amount).ToList();
-members.ForEach(x =>
-{
-    x.Id = perMemberTotal.Select(y => y.By).ToList().IndexOf(x);
-});
+artifact.Members = artifact.Members.OrderBy(x => perMemberTotal.First(y => y.By == x.Id).Amount).ToList();
+
 // Step 2: Form a per-member split matrix A
-var perMemberSplit = FileHelper.SaveResultAsArtifactAndGet(artifactFolder, "perMemberSplit", () => SplitHelper.GetPerMemberSplit(perMemberTotal));
+var perMemberSplit = SplitHelper.GetPerMemberSplit(perMemberTotal);
+
+
 // Step 3: Transpose the per-member split matrix A to create new matrix A'
-var transposedPerMemberSplit = FileHelper.SaveResultAsArtifactAndGet(artifactFolder, "transposedPerMemberSplit", () => perMemberSplit.Transpose());
+var transposedPerMemberSplit = perMemberSplit.Transpose();
+
 // Step 4: Create a new matrix B such that B = A-A'
-var subtractedPerMemberSplit = FileHelper.SaveResultAsArtifactAndGet(artifactFolder, "subtractedPerMemberSplit", () => perMemberSplit.Subtract(transposedPerMemberSplit));
+var subtractedPerMemberSplit = perMemberSplit.Subtract(transposedPerMemberSplit);
+
 // Step 5: Create another matrix C such that C = Max(0, B)
-var reducedPerMemberSplit = FileHelper.SaveResultAsArtifactAndGet(artifactFolder, "reducedPerMemberSplit", () => subtractedPerMemberSplit.Max(subtractedPerMemberSplit.CreateFlatMatrix(0)));
+var reducedPerMemberSplit = subtractedPerMemberSplit.Max(subtractedPerMemberSplit.CreateFlatMatrix(0));
+
 // Step 6: Create new reduced 1*X transaction matrix D such as D[i] = Sum(Row[i]) - Sum(Col[i])
-var transactions = FileHelper.SaveResultAsArtifactAndGet(artifactFolder, "transactions", () => SplitHelper.ReduceAndGetTransactionMatrix(reducedPerMemberSplit));
+var transactions = SplitHelper.ReduceAndGetTransactionMatrix(reducedPerMemberSplit);
+
 // Step 7: Every i in matrix D will pay i+1 X amount where X = (D1i + D1i-1)
-var finalDistributions = FileHelper.SaveResultAsArtifactAndGet(artifactFolder, "finalDistributions", () => SplitHelper.GetDistributionsFromTransactions(transactions, members));
+var finalDistributions = SplitHelper.GetDistributionsFromTransactions(transactions, artifact.Members);
 
 
 // Only used to print
-var perMemberSplitDistributions = FileHelper.SaveResultAsArtifactAndGet(artifactFolder, "perMemberSplitDistributions", () => SplitHelper.GetDistributions(perMemberSplit, members));
-var reducedPerMemberSplitDistributions = FileHelper.SaveResultAsArtifactAndGet(artifactFolder, "reducedPerMemberSplitDistributions", () => SplitHelper.GetDistributions(reducedPerMemberSplit, members));
+var perMemberSplitDistributions = SplitHelper.GetDistributions(perMemberSplit, artifact.Members);
+var reducedPerMemberSplitDistributions = SplitHelper.GetDistributions(reducedPerMemberSplit, artifact.Members);
 
 // To Pretty Print calculations
-Console.PrintHorizontalRule();
-Console.PrintHorizontalRule();
-OutputProvider.PrintExpenses("all", expenses);
-Console.PrintHorizontalRule();
-Console.PrintHorizontalRule();
-OutputProvider.PrintExpenses("total", perMemberTotal);
-Console.PrintHorizontalRule();
-Console.PrintHorizontalRule();
-OutputProvider.PrintExpenseMatrix("Split", perMemberSplit);
-Console.PrintHorizontalRule();
-OutputProvider.PrintDistributionInfo("per member split", perMemberSplitDistributions);
-Console.PrintHorizontalRule();
-Console.PrintHorizontalRule();
-OutputProvider.PrintExpenseMatrix("Reduced", reducedPerMemberSplit);
-Console.PrintHorizontalRule();
-OutputProvider.PrintDistributionInfo("per member reduced", reducedPerMemberSplitDistributions);
-Console.PrintHorizontalRule();
-Console.PrintHorizontalRule();
-OutputProvider.PrintTransactionMatrix(transactions);
-Console.PrintHorizontalRule();
-OutputProvider.PrintDistributionInfo("final", finalDistributions);
-Console.PrintHorizontalRule();
-Console.PrintHorizontalRule();
+OutputProvider.PrintHorizontalRule();
+OutputProvider.PrintHorizontalRule();
+Console.WriteLine();
+Console.WriteLine("Members:");
+artifact.Members.OrderBy(x => x.Id).ToList().PrintAsTable();
+Console.WriteLine("Expenses:");
+artifact.Expenses.OrderBy(x => x.By).ThenBy(x => x.Head).ThenBy(x => x.Amount).ToList().PrintAsTable(artifact.Members);
+Console.WriteLine("Per Member Total Expenses:");
+perMemberTotal.OrderBy(x => x.Amount).ToList().PrintAsTable(artifact.Members);
+OutputProvider.PrintHorizontalRule();
+Console.WriteLine();
+Console.WriteLine("Expense Matrix (Split):");
+perMemberSplit.Print();
+Console.WriteLine();
+perMemberSplitDistributions.Print("Per Member Split");
+Console.WriteLine();
+OutputProvider.PrintHorizontalRule();
+Console.WriteLine();
+Console.WriteLine("Expense Matrix (Reduced):");
+reducedPerMemberSplit.Print();
+Console.WriteLine();
+reducedPerMemberSplitDistributions.Print("Per Member Reduced");
+Console.WriteLine();
+OutputProvider.PrintHorizontalRule();
+Console.WriteLine();
+Console.WriteLine("Transaction Matrix:");
+transactions.Print();
+Console.WriteLine();
+finalDistributions.Print("Final");
+Console.WriteLine();
+OutputProvider.PrintHorizontalRule();
+OutputProvider.PrintHorizontalRule();
