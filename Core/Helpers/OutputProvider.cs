@@ -28,7 +28,6 @@ namespace Core.Helpers
         public static void PrintAsTable(this List<Member> members)
         {
             IColumn[] columns = [
-                new Column("Id", new CellFormat(Alignment.Center), new CellFormat(Alignment.Center)),
                 new Column("Name", new CellFormat(Alignment.Center), new CellFormat(Alignment.Left))
             ];
             var table = new Table(columns)
@@ -36,8 +35,8 @@ namespace Core.Helpers
                 Config = TableConfig.UnicodeAlt()
             };
 
-            members.ForEach(member => table.AddRow(member.Id, member.Name));
-            if (members.Count == 0) table.AddRow("*", "No members recorded");
+            members.ForEach(member => table.AddRow(member.Name));
+            if (members.Count == 0) table.AddRow("No members recorded");
 
             Console.WriteLine(table.ToString());
         }
@@ -53,7 +52,7 @@ namespace Core.Helpers
             {
                 Config = TableConfig.UnicodeAlt()
             };
-            expenses.ForEach(expense => table.AddRow(members.First(x => x.Id == expense.By).Id + ": " + members.First(x => x.Id == expense.By).Name, expense.Head, expense.Amount));
+            expenses.ForEach(expense => table.AddRow(members.First(x => x.Id == expense.By).Name, expense.Head, expense.Amount));
             if (expenses.Count == 0) table.AddRow("*", "No expenses recorded", "*");
 
             Console.WriteLine(table.ToString());

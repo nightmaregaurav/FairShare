@@ -31,12 +31,18 @@ namespace Core.Models
                 switch (selectedOption)
                 {
                     case "Add new member":
-                        var name = Prompt.Input<string>("Enter name of the new member", null, null, new[] { Validators.Required() });
+                        var name = Prompt.Input<string>("Enter name of the new member", null, null, new[] { 
+                            Validators.Required(),
+                            v => Members.Select(x => x.Name).Contains(v) ? new ValidationResult("A member with same name already exists, Choose a different Name.") : ValidationResult.Success
+                        });
                         Members.Add(new Member { Id = Members.Count, Name = name });
                         break;
                     case "Edit existing member":
                         var memberToEdit = Prompt.Select(GetMemberSelectOptions());
-                        var newName = Prompt.Input<string>("Enter new name for the member", memberToEdit.Name, memberToEdit.Name, new[] { Validators.Required() });
+                        var newName = Prompt.Input<string>("Enter new name for the member", memberToEdit.Name, memberToEdit.Name, new[] {
+                            Validators.Required(),
+                            v => Members.Select(x => x.Name).Contains(v) ? new ValidationResult("A member with same name already exists, Choose a different Name.") : ValidationResult.Success
+                        });
                         memberToEdit.Name = newName;
                         break;
                     case "Delete existing member":
@@ -108,7 +114,7 @@ namespace Core.Models
                 Message = "Select member",
                 Items = Members,
                 DefaultValue = Members[0],
-                TextSelector = member => $"{member.Id}: {member.Name}"
+                TextSelector = member => member.Name
             };
         }
 
@@ -119,7 +125,7 @@ namespace Core.Models
                 Message = "Select expense",
                 Items = Expenses,
                 DefaultValue = Expenses[0],
-                TextSelector = expense => $"{expense.Id}: {expense.Head} worth {expense.Amount} by {Members.First(x => x.Id == expense.By).Name}:{Members.First(x => x.Id == expense.By).Id}"
+                TextSelector = expense => $"{expense.Head} worth {expense.Amount} by {Members.First(x => x.Id == expense.By).Name}"
             };
         }
 
