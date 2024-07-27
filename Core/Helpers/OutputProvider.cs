@@ -60,7 +60,8 @@ namespace Core.Helpers
 
         public static void Print(this List<ExpenseDistribution> distributions, string type)
         {
-            Console.WriteLine($"Expense distributions ({type}):");
+            if(type == "Final") Console.WriteLine("Debt distributions:");
+            else Console.WriteLine($"Expense distributions ({type}):");
             foreach (var distribution in distributions) Console.WriteLine($"\t{distribution.Sender.Name} => {distribution.Receiver.Name} [{distribution.Amount}]");
         }
 
