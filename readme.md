@@ -1,7 +1,8 @@
+# Archive Note: I think the idea was trivial, and even better solution to same problem with more complexity is implemented [here](https://github.com/nightmaregaurav/shared-expenses-manager)
+
 # FairShare (Cost Splitter)
 #### Gaurav's fair share problem & Reduction by Debt Transfer Algorithm
 <hr/>
-
 ### Split shared expenses so the number of transactions are minimum and each member should remember the least number of transactions.
 ### Maximum Transactions = `(n-1)` `WHERE` `n` = `number of members in group`.
 ### Maximum Transactions one person should remember = `2` for any `n` where `n` = `number of members in group`.
